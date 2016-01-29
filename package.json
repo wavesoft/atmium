@@ -1,0 +1,33 @@
+{
+  "name": "atmium",
+  "version": "0.1.0",
+  "description": "Run web applications hosted in torrents",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wavesoft/atmium.git"
+  },
+  "keywords": [
+    "torrent",
+    "web",
+    "webapp"
+  ],
+  "author": "Ioannis Charalampidis (wavesoft)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wavesoft/atmium/issues"
+  },
+  "homepage": "https://github.com/wavesoft/atmium#readme",
+  "dependencies": {
+    "base85": "^2.1.0",
+    "bittorrent-dht": "^6.3.2",
+    "lzma": "^2.2.3",
+    "webtorrent": "^0.72.2"
+  },
+  "devDependencies": {
+    "gulp-browserify": "^0.5.1"
+  }
+}
