@@ -1,0 +1,112 @@
+
+// Embedded icon
+@atmium-icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAABFJJREFUeNrsW91x2kAQlpgUYHcgP+XRUIGhAjsVGCqwqcBQAVABuAKTChAVxH7ME+rA6iDZzaxmNIfuZ+/2JJFkZ27w2GZ1+93+fLscSfKPS9rVg38WN0N4GcO6Uv5UwHr/mp3e/zoAyOgnWA8NhqtSwtrDWgIYxUUDAIZn8LKlE/eRXSwg0haMn8LLyuHEEwePmAEI+4sBAIxHw5+F1SIIu94DEMl4cRDSSMZjknuLHF0TACHvHQBgPMb6SSDmXXLCDYBQhigZRNjYqgXjE3rGc6seQKeL7n0HC0vbkDZSVAQmYtxH8YKUYfjKkcC0LVgWP+gAci5XSB2MfyAS0zfDRUhT2mEpix0aTqQpNRi/gJeXC2/2rKUy7bCO9yJJDjQJb9vSBv8kLqoenZTKLw2/e46U8ArK2EfK1qUG/GpOcE8/h8ojrIVzCMAmPoUBwBPe+HRx1EZjHpoG7uFaFwap8kBE/iAYf3OJpkVgnqBNhmoOGAsZjzE9kurYsKbDmiCg0nGpAnArxMwmMaY3oHONusm7uPkncQmBQ6AX5HRSUYVmiwfHXFXCnq45VSDE7b8xjBiTAcN6M+XS2ODEGN4/dy3X+CxdDpD0gJFtlE1GV1NhUwhtXIYdTLbaOEVKhbg/Nh8LSzf5wtS9p02XFhB+MPjCGQhqEvzwJDhri/EHD2DRSw70fpNwKsOWvFALQO4BwKvllN4CGN3QBgKFSs4E4aoRACpdXMa2tsRoKLcYOsT5kqEvq3tjqklUrmxQW/aIvZ0Eq8yNiVvA805kHKtLHGhcytULjoa/TRNZsXkBJwyq2aZ2KuzKtExl714YgHHAYWj3N9DE7ZThSqbYlZTMUhG41Ds7A6DWfgZz7EgylNalesATt0tL+iNeewlqh6kpaVNK6cMYBLrYlWd+8G2HJWeHuakKsBKJQFly3rB0yIQCcGeiyMIbltZ3bAKA62Jjg7vuE7lxdyF5K6TWbZ4B8N2jNpvyxkxoszNh43dVA6cC4IPykyVphW5+JnETREnOS1M3uGQqnBKB0oGwIxBKT+OlXX9eL5lNzdDCwxO2lvKF+kaMTI7/N4pg/E7Vafp0mDsem9PY2oU8PRLnyGiVlDDfacDilTxB9y/T3AL0nk2PbPcDqt7A9WbIqK07vgwAjHcFUobyrEZ8XjQlEB826QoEBYCCuMPaNLJLPR9kGp93BgK18mi4823zGACwckLX4kuFXdBdIVCmEnnJALh+foBecgIQth20zknMEMCK8OnZgeUEYOVFZZeVw/uuMIDwlpg/44slSGZmXYcAyqajQ3vthQcwqoHoUET6/kHoQGTe8ukvpRUGAUDJqy0Q1sJtcXgI1EIBu8FpROOR2Y36xANUT5h5DlNcSVe0e0eiX5kBT8D2eSWo0umWSG8AqPX7q8DqUFAvsU8iS8yvzSEAtgtRTe6+iTAJah8AhTYjGOgZtw2DlWPi+XWX/yIgvwUYAOPbx60MleXkAAAAAElFTkSuQmCC";
+@atmium-warning: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAkxJREFUeNrsWs1twjAUTix6zwjtBu65B8IEpRM0nQCYIHSCdIN0A2CCcumdDWCD0nMv9ZMeEkJJSOznn4T3SRaWEyd+v9+zQxQxGAwGg8FgMBgM1/hbP91D87kG4VH4TP3soWHfC2JPwqfq5+tieHI3/d7eigcUFWPlTYQAurusuAT5YD7oEFACJhj3Sc0tR9UeVCgch+oBeYPwEV7LB+kBSHf7lreDFxyG5gGlpXvDVwDSXtphSopzBuMBpaM54SkAqU2n3HVCi7Fl4Ztob6faBvvPNbWBdVoceaA9EOblouxdYsyvLu4/0eKidx7QQHsfSvhFzRwokecuadFmDtBJYr+uE6KwZP0m2pMNU8cNtDjtkwfYsFjRCwUY0F4bWlwGrQCkvWubmcTgFTN8R7AekLcQUGpeOymvCFIBSHumlVsb62bqXTJED3B5pFUEpYCuuz2COCajReHJ+rJCKdKHFwgC6y+JaK+rV5DQojAUHhY9i/zBmBZNPaDQ5HUqLjemRWFgfYjZTHN65XcBzWcZ0eLI0Pq6GFfE79hwLRNn5wFIQasoLMAhy9pVCBRReCic5AAi2oPzwEdlsRga9HHM+W4x7ij8tW97bVB50InP/jFUQudDVKHhZqYUtqtaII5tXdOi6GB9E9prS3cUu7ysy1clYTvJ1MRqeV7BQR/GCAuknDQHWKK941nik4TCn/CmwuqTygNs1PsJbqFTC8IDXilD4BD1DwdKBbwT8LRLwFoXZDngjKdlXxTg8n9GDAaDwWAwGAxGD/EvwACf3cTixxncLgAAAABJRU5ErkJggg==";
+
+.transition(@params) {
+ -webkit-transition: @params;
+    -moz-transition: @params;
+    -o-transition: @params;
+       transition: @params; }
+
+html,body {
+	min-height: 100%;
+}
+
+.atmium-frame {
+	position: relative;
+
+	//
+	// Loading Screen
+	//
+	> .atmium-loading {
+		position: absolute;
+		left: 0; top: 0; 
+		right: 0; botom: 0;
+		font-family: Verdana, Geneva, sans-serif;
+		
+		// Center loading panel
+		display: flex;
+	    justify-content: center;
+	    align-items: center;
+
+		// Display transition	
+		.transition( opacity 0.5s );
+		opacity: 0;
+		&.visible {
+			opacity: 1.0;
+		}
+
+		// Warning icon
+		&.atmium-warning > div.atmium-loading-message {
+			> div.atmium-loading-logo {
+				background-image: url(@atmium-warning);
+			}
+			> div.atmium-loading-title {
+				font-size: 14px;
+			}
+			> div.atmium-loading-progress {
+				display: none;
+			}
+			> div.atmium-loading-progressbar {
+				display: none;
+			}
+		}
+
+		// Atmium loading banner
+		> div.atmium-loading-message {
+			width: 300px; height: 75px;
+			position: relative;
+
+			// Left-side logo
+			> div.atmium-loading-logo {
+				position: absolute;
+				left: 5px; top: 5px;
+				width: 64px; height: 64px;
+				background-image: url(@atmium-icon);
+			}
+	
+			// Top title
+			> div.atmium-loading-title {
+				position: absolute;
+				left: 82px; top: 8px;
+				font-size: 16px;
+				color: #000;
+			}
+
+			// Lower bandwidth and progress labels
+			> div.atmium-loading-progress {
+				position: absolute;
+				right: 10px; top: 40px;
+				font-size: 12px;
+				color: #B3B3B3;
+			}
+			> div.atmium-loading-bandwidth {
+				position: absolute;
+				left: 82px; top: 40px;
+				font-size: 12px;
+				color: #B3B3B3;
+			}
+
+			// Progress bar
+			> div.atmium-loading-progressbar {
+
+				// Container and bottom line
+				position: absolute;
+				left: 82px; top: 60px;
+				height: 5px; width: 210px;
+				border-bottom: solid 1px #D9E021;
+				overflow: hidden;
+
+				> div {
+					position: absolute;
+					left: 0; top: 0; height: 5px;
+					background-color: #D9E021;
+				}
+			}
+
+		}
+
+	}
+
+}

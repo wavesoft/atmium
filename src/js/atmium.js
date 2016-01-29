@@ -9,7 +9,10 @@ var _atmiumInstances = [];
  * Atmium Constructor
  */
 var Atmium = function( hostDOM ) {
+
+	// Prepare instance
 	var self = this;
+	_atmiumInstances.push( this );
 
 	// Create atmium GUI
 	this.gui = new AtmiumGUI( hostDOM );
@@ -17,21 +20,31 @@ var Atmium = function( hostDOM ) {
 	// Create a WebTorrent client
 	this.client = new WebTorrent();
 
-	// Keep on instances array
-	_atmiumInstances.push( this );
-
 };
 
 /**
  * Deploy webapp
  */
 Atmium.prototype.load = function( torrentId ) {
+	var self = this;
+
+	// Start loading
+	this.gui.showLoading();
 
 	// Download torrent specified
-	client.add(torrentId, function (torrent) {
+	this.client.add(torrentId, function (torrent) {
+
+		// Bind on progress evets
+		torrent.on('download', function(chunkSize) {
+			self.gui.updateProgres( this.progress, torrent.downloadSpeed, torrent.swarm.wires.length );
+		});
+		torrent.on('done', function() {
+			// Hide loading
+			self.gui.hideLoading();
+		});	
 
 		// Deploy
-		self._processTorrent( torrent.files );
+		self._processTorrent( torrent );
 
 	});
 
@@ -40,8 +53,9 @@ Atmium.prototype.load = function( torrentId ) {
 /**
  * Deploy webapp
  */
-Atmium.prototype._processTorrent = function( files ) {
-	var self = this;
+Atmium.prototype._processTorrent = function( torrent ) {
+	var self = this,
+		files = torrent.files;
 
 	// Look for manifest file
 	var manifest = null;
@@ -55,14 +69,24 @@ Atmium.prototype._processTorrent = function( files ) {
 	// Validate
 	if (!manifest) {
 		this.gui.criticalError("The specified website does not contain a valid Atmium project.");
+		torrent.pause();
 		return;
 	}
 
-	// Handle buffer
+	// Read manifest
 	manifest.getBuffer(function(err, buffer) {
 
-		console.log(err,buffer);
-		console.buf = buffer;
+		// Trigger error if something goes wrong
+		if (err) {
+			self.gui.criticalError("Unable to download Atmium manifest! "+err);
+			torrent.pause();
+			return;
+		}
+
+		// Parse manifest
+		var manifest = JSON.parse(buffer.toString())
+		console.log(manifest);
+
 
 	});
 
@@ -93,15 +117,3 @@ if (hash.length > 1) {
 
 // Expose atmium
 module.exports = Atmium;
-
-// var client = new WebTorrent()
-// var torrentId = '005224466942a232f89a22e3975615629d9b2607'
-
-// client.add(torrentId, function (torrent) {
-// 	// Torrents can contain many files. Let's use the first.
-// 	var file = torrent.files[0]
-
-// 	// Display the file by adding it to the DOM. Supports video, audio, image, etc. files
-// 	file.appendTo('body')
-// })
-
