@@ -8,6 +8,9 @@ var AtmiumGUI = function( hostDOM ) {
 	this.host = hostDOM;
 	hostDOM.classList.add("atmium-frame");
 
+	// Properties
+	this.lockdown = false;
+
 	// Create progress DOM
 	var domLoadingFrame = document.createElement('div'),
 		domLoadingMessage = document.createElement('div'),
@@ -55,6 +58,7 @@ var AtmiumGUI = function( hostDOM ) {
  * Update progress
  */
 AtmiumGUI.prototype.updateProgres = function( progress, speed, peers ) {
+	if (this.lockdown) return;
 	console.log(progress, speed, peers);
 	this._progElm.bandwidth.innerHTML = "Speed: " + (speed / 1024).toFixed(2) + " Kb/s";
 	this._progElm.progress.innerHTML =  (progress*100).toFixed(0) + "%";
@@ -65,6 +69,7 @@ AtmiumGUI.prototype.updateProgres = function( progress, speed, peers ) {
  * Show loading frame
  */
 AtmiumGUI.prototype.showLoading = function() {
+	if (this.lockdown) return;
 	var self = this;
 
 	// Initialize properties
@@ -86,6 +91,7 @@ AtmiumGUI.prototype.showLoading = function() {
  * Hide loading frame
  */
 AtmiumGUI.prototype.hideLoading = function() {
+	if (this.lockdown) return;
 	var self = this;
 
 	// Initialize properties
@@ -104,6 +110,7 @@ AtmiumGUI.prototype.hideLoading = function() {
  * Show a critical error and disable the UI
  */
 AtmiumGUI.prototype.criticalError = function( message ) {
+	if (this.lockdown) return;
 	var self = this;
 
 	// Display
@@ -118,6 +125,16 @@ AtmiumGUI.prototype.criticalError = function( message ) {
 		self._progElm.frame.classList.add("visible");
 	},10);
 
+	// Enter lockdown
+	this.lockdown = true;
+
+}
+
+/**
+ * Define the placeholder
+ */
+AtmiumGUI.prototype.setPlaceholder = function( url ) {
+	this._progElm.frame.style['background-image'] = "url(" + url + ")";
 }
 
 /**

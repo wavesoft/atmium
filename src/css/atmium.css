@@ -1,6 +1,10 @@
-html,
+html {
+  height: 100%;
+}
 body {
   min-height: 100%;
+  padding: 0;
+  margin: 0;
 }
 .atmium-frame {
   position: relative;
@@ -12,6 +16,9 @@ body {
   right: 0;
   botom: 0;
   font-family: Verdana, Geneva, sans-serif;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -24,22 +31,29 @@ body {
 .atmium-frame > .atmium-loading.visible {
   opacity: 1.0;
 }
+.atmium-frame > .atmium-loading.atmium-warning > div.atmium-loading-message {
+  border: solid 1px #F7DFBF;
+}
 .atmium-frame > .atmium-loading.atmium-warning > div.atmium-loading-message > div.atmium-loading-logo {
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAkxJREFUeNrsWs1twjAUTix6zwjtBu65B8IEpRM0nQCYIHSCdIN0A2CCcumdDWCD0nMv9ZMeEkJJSOznn4T3SRaWEyd+v9+zQxQxGAwGg8FgMBgM1/hbP91D87kG4VH4TP3soWHfC2JPwqfq5+tieHI3/d7eigcUFWPlTYQAurusuAT5YD7oEFACJhj3Sc0tR9UeVCgch+oBeYPwEV7LB+kBSHf7lreDFxyG5gGlpXvDVwDSXtphSopzBuMBpaM54SkAqU2n3HVCi7Fl4Ztob6faBvvPNbWBdVoceaA9EOblouxdYsyvLu4/0eKidx7QQHsfSvhFzRwokecuadFmDtBJYr+uE6KwZP0m2pMNU8cNtDjtkwfYsFjRCwUY0F4bWlwGrQCkvWubmcTgFTN8R7AekLcQUGpeOymvCFIBSHumlVsb62bqXTJED3B5pFUEpYCuuz2COCajReHJ+rJCKdKHFwgC6y+JaK+rV5DQojAUHhY9i/zBmBZNPaDQ5HUqLjemRWFgfYjZTHN65XcBzWcZ0eLI0Pq6GFfE79hwLRNn5wFIQasoLMAhy9pVCBRReCic5AAi2oPzwEdlsRga9HHM+W4x7ij8tW97bVB50InP/jFUQudDVKHhZqYUtqtaII5tXdOi6GB9E9prS3cUu7ysy1clYTvJ1MRqeV7BQR/GCAuknDQHWKK941nik4TCn/CmwuqTygNs1PsJbqFTC8IDXilD4BD1DwdKBbwT8LRLwFoXZDngjKdlXxTg8n9GDAaDwWAwGAxGD/EvwACf3cTixxncLgAAAABJRU5ErkJggg==");
 }
 .atmium-frame > .atmium-loading.atmium-warning > div.atmium-loading-message > div.atmium-loading-title {
   font-size: 14px;
 }
-.atmium-frame > .atmium-loading.atmium-warning > div.atmium-loading-message > div.atmium-loading-progress {
-  display: none;
-}
+.atmium-frame > .atmium-loading.atmium-warning > div.atmium-loading-message > div.atmium-loading-progress,
 .atmium-frame > .atmium-loading.atmium-warning > div.atmium-loading-message > div.atmium-loading-progressbar {
   display: none;
+}
+.atmium-frame > .atmium-loading.atmium-warning > div.atmium-loading-message > div.atmium-loading-bandwidth {
+  top: 45px;
 }
 .atmium-frame > .atmium-loading > div.atmium-loading-message {
   width: 300px;
   height: 75px;
   position: relative;
+  border: solid 1px #EAEA96;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.9);
 }
 .atmium-frame > .atmium-loading > div.atmium-loading-message > div.atmium-loading-logo {
   position: absolute;

@@ -9,8 +9,12 @@
     -o-transition: @params;
        transition: @params; }
 
-html,body {
-	min-height: 100%;
+html {
+   height: 100%;
+}
+body {
+   min-height: 100%;
+   padding: 0; margin: 0;
 }
 
 .atmium-frame {
@@ -24,6 +28,11 @@ html,body {
 		left: 0; top: 0; 
 		right: 0; botom: 0;
 		font-family: Verdana, Geneva, sans-serif;
+		height: 100%;
+
+		// Loading placeholder
+		background-size: cover;
+		background-position: center;
 		
 		// Center loading panel
 		display: flex;
@@ -39,17 +48,18 @@ html,body {
 
 		// Warning icon
 		&.atmium-warning > div.atmium-loading-message {
+			border: solid 1px #F7DFBF;
 			> div.atmium-loading-logo {
 				background-image: url(@atmium-warning);
 			}
 			> div.atmium-loading-title {
 				font-size: 14px;
 			}
-			> div.atmium-loading-progress {
+			> div.atmium-loading-progress, > div.atmium-loading-progressbar {
 				display: none;
 			}
-			> div.atmium-loading-progressbar {
-				display: none;
+			> div.atmium-loading-bandwidth {
+				top: 45px;
 			}
 		}
 
@@ -57,6 +67,9 @@ html,body {
 		> div.atmium-loading-message {
 			width: 300px; height: 75px;
 			position: relative;
+			border: solid 1px #EAEA96;
+			border-radius: 8px;
+			background-color: rgba(255,255,255,0.9);
 
 			// Left-side logo
 			> div.atmium-loading-logo {
