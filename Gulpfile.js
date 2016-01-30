@@ -1,27 +1,11 @@
 var gulp = require('gulp');
-
-var browserify = require('browserify');
-var source = require('vinyl-source-stream');
 var uglify = require('gulp-uglifyjs');
-var streamify = require('gulp-streamify');
-
 var webpack = require('webpack-stream');
 
 /**
- * Use browserify to build scripts
+ * Javascript minification and compilation with webpack
  */
-// gulp.task('scripts', function() {
-// 	return browserify('src/js/atmium.js')
-// 		.bundle()
-// 		//Pass desired output filename to vinyl-source-stream
-// 		.pipe(source('atmium.js'))
-// 		// Uglify
-// 		.pipe(streamify(uglify()))
-// 		// Start piping stream to tasks!
-// 		.pipe(gulp.dest('build/js'));
-// });
-
-gulp.task('scripts', function() {
+gulp.task('js', function() {
 	return gulp.src('src/js/atmium.js')
 		.pipe(webpack({
 			module: {
@@ -34,7 +18,10 @@ gulp.task('scripts', function() {
 		    },
 		    output: {
 		    	'filename': 'atmium.js'
-		    }
+		    },
+		    plugins: [
+		    	new webpack.webpack.optimize.DedupePlugin()
+		    ]
 		}))
 		.pipe(gulp.dest('build/js'))
 		.pipe(uglify("atmium.min.js", { outSourceMap: true }))
@@ -61,12 +48,12 @@ gulp.task('css', function() {
 /**
  * Entry point
  */
-gulp.task('default', ['scripts', 'static', 'css'], function() {
+gulp.task('default', ['js', 'static', 'css'], function() {
 
 });
 
 /**
  * Watch task
  */
-gulp.watch('src/js/**', ['scripts'], function(event) { })
+gulp.watch('src/js/**', ['js'], function(event) { })
 gulp.watch('src/css/*.css', ['css'], function(event) { })

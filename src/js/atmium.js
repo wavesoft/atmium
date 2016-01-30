@@ -136,9 +136,6 @@ Atmium.prototype.load = function( torrentId ) {
 	var self = this;
 	if (this.lockdown) return;
 
-	// Start loading
-	self.gui.showLoading();
-
 	// Get a unique ID of this torrent
 	self.infoHash = null;
 	if (torrentId.substr(0,7).toLowerCase() == "magnet:") {
@@ -153,42 +150,48 @@ Atmium.prototype.load = function( torrentId ) {
 		name: "atmium." + self.infoHash
 	});
 
-	// If we have fully cached this torrent, seed it,
-	// otherwise download it again.
-	self.cache.getItem('_torrent', function(err, data) {
+	// Check if we have cached metadata for this fileset
+	self.cache.getItem('META', function(err, data) {
 
-		// Check for download state
-		var download = false;
+		// Check for errors
 		if (err) {
-			console.info("Application", torrentId, "is not cached, downloading it");
-			download = true;
+			console.error("Unable to check cache status!",err);
+			return;
 		}
-		if (!data) download = true;
 
-		// Download or serve
-		if (download) {
+		// Check cache state
+		if (data) {
 
-			// Download torrent specified
-			self.client.add(torrentId, function (torrent) {
-				window.torrent = torrent;
+			// Initialize with cache
+			self.fileset = AtmiumFileset.fromCache( self.cache, data );
 
-				// Bind on progress evets
-				torrent.on('download', function(chunkSize) {
-					self.gui.updateProgres( this.progress, torrent.downloadSpeed, torrent.swarm.wires.length );
-				});
-				torrent.on('done', function() {
+			// Initialize interface in priority
+			self._deploy( self.fileset );
 
-					// Hide GUI
-					self.gui.hideLoading();
-
-				});	
-
-				// Deploy
-				self._processTorrent( torrent );
+			// Compile the torrent to seed
+			self.fileset.compileTorrent(function( err, result ) {
 
 			});
 
 		} else {
+
+			// Initialize with torrent
+			self.gui.showLoading();
+			self.client.add(torrentId, function (torrent) {
+
+				// Bind on progress evets
+				torrent.on('download', function(chunkSize) {
+					self.gui.updateProgres( torrent.progress, torrent.downloadSpeed, torrent.swarm.wires.length );
+				});
+				torrent.on('done', function() {
+					self.gui.hideLoading();
+				});	
+
+				// Build fileset and deploy ASAP
+				self.fileset = AtmiumFileset.fromTorrent( torrent, self.cache );
+				self._deploy( self.fileset, torrent );
+
+			});
 
 		}
 
@@ -199,59 +202,33 @@ Atmium.prototype.load = function( torrentId ) {
 /**
  * Deploy webapp
  */
-Atmium.prototype._processTorrent = function( torrent ) {
+Atmium.prototype._deploy = function( fileset, torrent ) {
 	var self = this;
+	window.fileset = fileset;
 
-	// Keep file details
-	this.files = torrent.files;
+	// Get manifest
+	fileset.getFileContents( "Atmium.json", function(err, buffer) {
 
-	// Check for prefix strip
-	var firstPath = this.files[0].path;
-	if (firstPath.indexOf("/") > 0) {
-
-		// Make sure this prefix exists in every file
-		var prefix = firstPath.split("/")[0]+"/", stripPrefix = true;
-		for (var i=0; i<this.files.length; i++) {
-			if (this.files[i].path.substr(0,prefix.length) != prefix) {
-				stripPrefix = false;
-				break;
-			}
-		}
-
-		// Strip prefix
-		if (stripPrefix) {
-			for (var i=0; i<this.files.length; i++) 
-				this.files[i].path = this.files[i].path.substr(prefix.length);
-		}
-
-	}
-
-	// Validate manifest
-	var manifest = this.getFile("Atmium.json");
-	if (!manifest) {
-		this.gui.criticalError("Missing atmium manifest file. Unable to continue!");
-		torrent.destroy();
-		return;
-	}
-
-	// Read manifest
-	manifest.getBuffer(function(err, buffer) {
-
-		// Trigger error if something goes wrong
+		// Handle errors
 		if (err) {
-			self.gui.criticalError("Unable to download Atmium manifest! "+err);
-			torrent.destroy();
+			self.gui.criticalError("Unable to process atmium manifest! "+err);
+			if (torrent) torrent.destroy();
+			return;
+		}
+		if (!buffer) {
+			self.gui.criticalError("Missing atmium manifest file. Unable to continue!");
+			if (torrent) torrent.destroy();
 			return;
 		}
 
 		// Parse manifest
-		var manifest = JSON.parse(buffer.toString());
+		var manifest = JSON.parse(buffer);
 		var appConfig = manifest['app'] || {};
 
 		// Apply app config
 		if (appConfig['title']) window.title = appConfig['title'];
 		if (appConfig['placeholder']) {
-			self.getFileURL( appConfig['placeholder'], function(err, url) {
+			fileset.getFileURL( appConfig['placeholder'], function(err, url) {
 				if (err) {
 					console.log("Could not load placeholder!",err);
 				} else {
@@ -261,6 +238,7 @@ Atmium.prototype._processTorrent = function( torrent ) {
 		}
 
 	});
+
 
 }
 

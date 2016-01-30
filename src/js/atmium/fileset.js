@@ -1,27 +1,49 @@
-var render = require('render-media')
+
+var mime = require("mime")
+var magnetURI = require('magnet-uri')
+var Buffer = require('buffer').Buffer;
+
+/**
+ * Find the fine in the specified list
+ */
+function fileFromList( filename, list ) {
+	for (var i=0; i<list.length; i++) {
+		if (list[i].path == filename) {
+			return list[i];
+		}
+	}
+	return null;
+}
 
 /**
  * Fileset object
  */
 var Fileset = function() {
 
-	// Prefix to strip from file names
-	this.prefix = 0;
-
 	// Load callbacks
 	this._torrent = null;
 	this._cache = null;
 	this._loaded = false;
 	this._loadCallbacks = [];
-	this._cachedFiles = { };
 	this._fileCallbacks = {};
+	this._meta = {};
 
 };
 
 /**
  * Create a fileset object from cache
  */
-Fileset.fromCache = function( cache ) {
+Fileset.fromCache = function( cache, torrentMeta ) {
+
+	// Create a fileset
+	var fileset = new Fileset();
+
+	// Update properties
+	fileset._cache = cache;
+	fileset._meta = torrentMeta;
+
+	// Return fileset
+	return fileset;
 
 }
 
@@ -36,6 +58,12 @@ Fileset.fromTorrent = function( torrent, cache ) {
 
 	// Update properties
 	fileset._torrent = torrent;
+	fileset._cache = cache;
+	fileset._meta = {
+		'm': torrent.magnetURI,
+		'n': torrent.name,
+		'p': '',
+	};
 
 	// Check if all torrent files have a common prefix
 	var firstPath = torrentFiles[0].path;
@@ -52,7 +80,7 @@ Fileset.fromTorrent = function( torrent, cache ) {
 
 		// Update torrent config prefix length
 		if (hasPrefix)
-			fileset.prefix = prefix;
+			fileset._meta.p = prefix;
 
 	}
 
@@ -60,11 +88,14 @@ Fileset.fromTorrent = function( torrent, cache ) {
 	torrent.on('done', (function() {
 
 		// Call callbacks
-		fileset._loaded = true;
-		for (var i=0; i<fileset._loadCallbacks; i++)
-			fileset._loadCallbacks[i]();
+		this._loaded = true;
+		for (var i=0; i<this._loadCallbacks; i++)
+			this._loadCallbacks[i]();
 
-	}).bind(this));
+		// Save fileset metadata
+		cache.setItem( 'META', this._meta );
+
+	}).bind(fileset));
 
 	// Return fileset
 	return fileset;
@@ -97,14 +128,19 @@ Fileset.prototype.getFileBuffer = function( filename, callback ) {
 
 	}).bind(this);
 
-	// Check if we can consult the cache
-	var fname = this.prefix + filename;
-	if (this._cache) {
-		this._cache.getItem(fname, completeCallback);
-	} 
-	// Check if we can consult the torrent
-	else if (this._torrent) {
-		this._torrent.getBuffer(fname, (function(err, buffer) {
+	// Check various sources for the file
+	var fname = this._meta.p + filename;
+	if (this._torrent) {
+
+		// Get file from torrent
+		var file = fileFromList( fname, this._torrent.files );
+		if (!file) {
+			completeCallback("The specified file ("+fname+") does not exists in the torrent!", null);
+			return;
+		}
+
+		// Get buffer
+		file.getBuffer((function(err, buffer) {
 
 			// Check for errors
 			if (err) {
@@ -116,10 +152,9 @@ Fileset.prototype.getFileBuffer = function( filename, callback ) {
 			if (this._cache) {
 
 				// Mark file as cached & update
-				this._cache.setItem(fname, buffer, function(err, result) {
-					this._cachedFiles[fname] = true;
+				this._cache.setItem(fname, buffer, (function(err, result) {
 					completeCallback( null, buffer );
-				});
+				}).bind(this));
 
 			} else {
 				completeCallback( null, buffer );
@@ -127,19 +162,65 @@ Fileset.prototype.getFileBuffer = function( filename, callback ) {
 
 		}).bind(this));
 	}
+	// Otherwise check cache
+	else if (this._cache) {
+		this._cache.getItem(fname, completeCallback);
+	} 
 	// No appropriate source found
 	else {
-		completeCallback("Fileset not initialized!", null);
+		completeCallback("Could not locate the file specified!", null);
 	}
 
+}
+
+/**
+ * Return a file contents as string
+ */
+Fileset.prototype.getFileContents = function( filename, callback ) {
+	this.getFileBuffer(filename, function(err, buf) {
+		if (err) {
+			// Forward error on errors
+			callback(err, null);
+		} else {
+			// Create blob URL
+		    callback(null, (new Buffer(buf)).toString() );
+		}
+	});
 }
 
 /**
  * Return a blob url for he specified filename
  */
 Fileset.prototype.getFileURL = function( filename, callback ) {
-	var mime = render.mime[path.extname(filename).toLowerCase()]
+	var mimeType = mime.lookup( filename );
+	this.getFileBuffer(filename, function(err, buf) {
+		if (err) {
+			// Forward error on errors
+			callback(err, null);
+		} else {
+			// Create blob URL
+			var blob = mimeType ? new Blob([ buf ], { type: mimeType }) : new Blob([ buf ])
+		    var url = URL.createObjectURL(blob);
+		    callback(null, url);
+		}
+	});
+}
+
+/**
+ * Compile resources required to seed a torrent
+ */
+Fileset.prototype.compileTorrent = function( callback ) {
+
+	// Validate
+	if (!this._cache) {
+		callback("No cache store to compile torrent information from", null);
+		return;
+	}
+
+	// Collect metadata
+	var meta = magnetURI.decode( this._meta.m );
 
 }
 
+// Export fileset
 module.exports = Fileset;

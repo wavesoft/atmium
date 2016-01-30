@@ -22,19 +22,13 @@
   },
   "homepage": "https://github.com/wavesoft/atmium#readme",
   "dependencies": {
-    "base85": "^2.1.0",
-    "bittorrent-dht": "^6.3.2",
     "localforage": "^1.3.3",
-    "lzma": "^2.2.3",
     "magnet-uri": "^5.1.2",
-    "render-media": "^2.0.2",
+    "mime": "^1.3.4",
     "webtorrent": "^0.72.2"
   },
   "devDependencies": {
     "babel-plugin-system-import-transformer": "^1.1.5",
-    "browserify-transform-tools": "^1.5.1",
-    "gulp-browserify": "^0.5.1",
-    "gulp-streamify": "^1.0.2",
     "gulp-uglifyjs": "^0.6.2",
     "json-loader": "^0.5.4",
     "vinyl-source-stream": "^1.1.0",
