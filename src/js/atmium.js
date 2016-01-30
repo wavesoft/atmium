@@ -41,93 +41,6 @@ var Atmium = function( hostDOM ) {
 
 };
 
-/**
- * Find and return a file from the list of files
- */
-Atmium.prototype.getFile = function( filename ) {
-
-	// Look for manifest file
-	for (var i=0; i<this.files.length; i++) {
-		if (this.files[i].path == filename) {
-			return this.files[i];
-		}
-	}
-
-	// Return file
-	return null;
-
-}
-
-/**
- * Find and callback when a file is ready to be used
- */
-Atmium.prototype.getFileBuffer = function( filename, callback ) {
-	var file = this.getFile(filename);
-	if (!file) return;
-	// Get buffer
-	file.getBuffer(function(err, buffer) {
-
-	});
-}
-
-/**
- * Find and callback when a file is ready to be used
- */
-Atmium.prototype.getFileURL = function( filename, callback ) {
-	var file = this.getFile(filename);
-	if (!file) return;
-	// Get blob URL
-	file.getBlobURL(function(err, buffer) {
-
-	});
-}
-
-/**
- * Parse and cache torrent details
- */
-Atmium.prototype._cacheTorrent = function( torrent, callback ) {
-
-	// Get files in torrent
-	var torrentFiles = torrent.files;
-	var torrentConfig = {
-		'files': { },
-		'prefix': ''
-	};
-
-	// Check if all torrent files have a common prefix
-	var firstPath = torrentFiles[0].path;
-	if (firstPath.indexOf("/") > 0) {
-
-		// Make sure this prefix exists in every file
-		var prefix = firstPath.split("/")[0]+"/", hasPrefix = true;
-		for (var i=0; i<torrentFiles.length; i++) {
-			if (torrentFiles[i].path.substr(0,prefix.length) != prefix) {
-				hasPrefix = false;
-				break;
-			}
-		}
-
-		// Update torrent config prefix
-		if (hasPrefix)
-			torrentConfig.prefix = prefix;
-	}
-
-	// Cache all files when done
-	torrent.on('done', function() {
-
-		// Hide GUI
-		self.gui.hideLoading();
-
-	});	
-
-}
-
-/**
- * Restore torrent from cache and trigger callback
- */
-Atmium.prototype._torrentFromCache = function( callback ) {
-
-}
 
 /**
  * Deploy webapp
@@ -170,6 +83,17 @@ Atmium.prototype.load = function( torrentId ) {
 
 			// Compile the torrent to seed
 			self.fileset.compileTorrent(function( err, result ) {
+
+				// Check for errors
+				if (err) {
+					console.error("Unable to compile torrent from cache!", err);
+					return;
+				}
+
+				// Start seeding torrent
+				self.client.seed( result.files, result.opts, function(torrent) {
+					console.info("Seeding torrent " + torrent.infoHash);
+				});
 
 			});
 

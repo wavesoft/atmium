@@ -218,7 +218,34 @@ Fileset.prototype.compileTorrent = function( callback ) {
 	}
 
 	// Collect metadata
-	var meta = magnetURI.decode( this._meta.m );
+	var magnet = magnetURI.decode( this._meta.m ),
+		opt = {
+			'name': this._meta.m,
+			'announceList': magnet.announce
+		};
+
+	// Iterate over cache files and build files array
+	var files = [];
+	this._cache.iterate(function(value, key, iterationNumber) {
+
+		// Skip metadata
+		if (key == 'META') return;
+
+		// Create file list
+		var buf = new Buffer(value);
+		buf.fullPath = key;
+		files.push( buf );
+
+	}, function(err) {
+		if (err) {
+			// An error occured
+			callback(err, null);
+		} else {
+			// Iteration completed
+			callback(null, { 'files': files, 'opt': opt })
+
+		}
+	});
 
 }
 

@@ -128,13 +128,12 @@ AtmiumGUI.prototype.criticalError = function( message ) {
 	if (this.lockdown) return;
 	var self = this;
 
-	// Display
+	// Update to warning message
 	this._progElm.frame.classList.add("atmium-warning");
 	this._progElm.title.innerHTML = message;
 	this._progElm.bandwidth.innerHTML = "The page loading is aborted";
 
-	// Show
-	this._progElm.frame.classList.add("atmium-warning");
+	// Make sure it's visible
 	this._progElm.frame.style['display'] = "flex";
 	setTimeout(function() {
 		self._progElm.frame.classList.add("visible");
