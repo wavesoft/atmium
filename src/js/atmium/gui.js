@@ -60,9 +60,24 @@ var AtmiumGUI = function( hostDOM ) {
 AtmiumGUI.prototype.updateProgres = function( progress, speed, peers ) {
 	if (this.lockdown) return;
 	console.log(progress, speed, peers);
-	this._progElm.bandwidth.innerHTML = "Speed: " + (speed / 1024).toFixed(2) + " Kb/s";
-	this._progElm.progress.innerHTML =  (progress*100).toFixed(0) + "%";
-	this._progElm.progressbar.style['width'] =  (progress*100)+"%";
+
+	// Update display
+	if (speed !== undefined) {
+		this._progElm.bandwidth.innerHTML = "Speed: " + (speed / 1024).toFixed(2) + " Kb/s";
+	}
+	if (progress !== undefined) {
+		this._progElm.progress.innerHTML =  (progress*100).toFixed(0) + "%";
+		this._progElm.progressbar.style['width'] =  (progress*100)+"%";
+	}
+
+	// Display message according to peers connected
+	if (peers !== undefined) {
+		if (peers == 0) {
+			this._progElm.title.innerHTML = "Connecting to peers...";
+		} else {
+			this._progElm.title.innerHTML = "Loading resources...";
+		}
+	}
 }
 
 /**
@@ -73,7 +88,7 @@ AtmiumGUI.prototype.showLoading = function() {
 	var self = this;
 
 	// Initialize properties
-	this._progElm.title.innerHTML = "Loading resources...";
+	this._progElm.title.innerHTML = "Connecting to peers...";
 	this._progElm.bandwidth.innerHTML = "Speed: 0.00 Kb/s";
 	this._progElm.progress.innerHTML = "0%";
 	this._progElm.progressbar.style['width'] = "0%";

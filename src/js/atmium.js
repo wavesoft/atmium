@@ -1,7 +1,9 @@
-var WebTorrent = require('webtorrent/webtorrent.min')
+var WebTorrent = require('webtorrent')
 var magnetURI = require('magnet-uri')
 var localForage = require('localforage')
+
 var AtmiumGUI = require('./atmium/gui')
+var AtmiumFileset = require('./atmium/fileset');
 
 // Collect atmium instances, used for populating
 // the first instance by the URL specified.
@@ -16,14 +18,26 @@ var Atmium = function( hostDOM ) {
 	var self = this;
 	_atmiumInstances.push( this );
 
+	// Setup properties
+	this.lockdown = false;
+	this.files = [];
+
 	// Create atmium GUI
 	this.gui = new AtmiumGUI( hostDOM );
 
-	// Create a WebTorrent client
-	this.client = new WebTorrent();
-
-	// Torrent files
-	this.files = [];
+	// Valdiate and start
+	if (!WebTorrent.WEBRTC_SUPPORT) {
+		this.gui.criticalError("Your browser lacks <strong>WebRTC</strong> support. Please update!");
+		this.lockdown = true;
+	} else {
+		try {
+			// Create a WebTorrent client
+			this.client = new WebTorrent();
+		} catch (e) {
+			this.gui.criticalError("Unable to initialize the WebTorrent component!");
+			this.lockdown = true;
+		}
+	}
 
 };
 
@@ -51,7 +65,9 @@ Atmium.prototype.getFileBuffer = function( filename, callback ) {
 	var file = this.getFile(filename);
 	if (!file) return;
 	// Get buffer
-	file.getBuffer( callback );
+	file.getBuffer(function(err, buffer) {
+
+	});
 }
 
 /**
@@ -61,7 +77,56 @@ Atmium.prototype.getFileURL = function( filename, callback ) {
 	var file = this.getFile(filename);
 	if (!file) return;
 	// Get blob URL
-	file.getBlobURL( callback );
+	file.getBlobURL(function(err, buffer) {
+
+	});
+}
+
+/**
+ * Parse and cache torrent details
+ */
+Atmium.prototype._cacheTorrent = function( torrent, callback ) {
+
+	// Get files in torrent
+	var torrentFiles = torrent.files;
+	var torrentConfig = {
+		'files': { },
+		'prefix': ''
+	};
+
+	// Check if all torrent files have a common prefix
+	var firstPath = torrentFiles[0].path;
+	if (firstPath.indexOf("/") > 0) {
+
+		// Make sure this prefix exists in every file
+		var prefix = firstPath.split("/")[0]+"/", hasPrefix = true;
+		for (var i=0; i<torrentFiles.length; i++) {
+			if (torrentFiles[i].path.substr(0,prefix.length) != prefix) {
+				hasPrefix = false;
+				break;
+			}
+		}
+
+		// Update torrent config prefix
+		if (hasPrefix)
+			torrentConfig.prefix = prefix;
+	}
+
+	// Cache all files when done
+	torrent.on('done', function() {
+
+		// Hide GUI
+		self.gui.hideLoading();
+
+	});	
+
+}
+
+/**
+ * Restore torrent from cache and trigger callback
+ */
+Atmium.prototype._torrentFromCache = function( callback ) {
+
 }
 
 /**
@@ -69,6 +134,7 @@ Atmium.prototype.getFileURL = function( filename, callback ) {
  */
 Atmium.prototype.load = function( torrentId ) {
 	var self = this;
+	if (this.lockdown) return;
 
 	// Start loading
 	self.gui.showLoading();
@@ -83,8 +149,8 @@ Atmium.prototype.load = function( torrentId ) {
 	}
 
 	// Create a cache instance
-	self.cache = localforage.createInstance({
-		name: "atmium." + infoHash
+	self.cache = localForage.createInstance({
+		name: "atmium." + self.infoHash
 	});
 
 	// If we have fully cached this torrent, seed it,
@@ -97,12 +163,14 @@ Atmium.prototype.load = function( torrentId ) {
 			console.info("Application", torrentId, "is not cached, downloading it");
 			download = true;
 		}
+		if (!data) download = true;
 
 		// Download or serve
 		if (download) {
 
 			// Download torrent specified
 			self.client.add(torrentId, function (torrent) {
+				window.torrent = torrent;
 
 				// Bind on progress evets
 				torrent.on('download', function(chunkSize) {
