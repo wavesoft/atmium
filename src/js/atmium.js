@@ -1,5 +1,7 @@
 var WebTorrent = require('webtorrent/webtorrent.min')
-var AtmiumGUI = require('./atmium/gui');
+var magnetURI = require('magnet-uri')
+var localForage = require('localforage')
+var AtmiumGUI = require('./atmium/gui')
 
 // Collect atmium instances, used for populating
 // the first instance by the URL specified.
@@ -69,22 +71,58 @@ Atmium.prototype.load = function( torrentId ) {
 	var self = this;
 
 	// Start loading
-	this.gui.showLoading();
+	self.gui.showLoading();
 
-	// Download torrent specified
-	this.client.add(torrentId, function (torrent) {
+	// Get a unique ID of this torrent
+	self.infoHash = null;
+	if (torrentId.substr(0,7).toLowerCase() == "magnet:") {
+		var uri = magnetURI.decode(torrentId);
+		self.infoHash = uri.infoHash;
+	} else {
+		self.infoHash = torrentId;
+	}
 
-		// Bind on progress evets
-		torrent.on('download', function(chunkSize) {
-			self.gui.updateProgres( this.progress, torrent.downloadSpeed, torrent.swarm.wires.length );
-		});
-		torrent.on('done', function() {
-			// Hide loading
-			self.gui.hideLoading();
-		});	
+	// Create a cache instance
+	self.cache = localforage.createInstance({
+		name: "atmium." + infoHash
+	});
 
-		// Deploy
-		self._processTorrent( torrent );
+	// If we have fully cached this torrent, seed it,
+	// otherwise download it again.
+	self.cache.getItem('_torrent', function(err, data) {
+
+		// Check for download state
+		var download = false;
+		if (err) {
+			console.info("Application", torrentId, "is not cached, downloading it");
+			download = true;
+		}
+
+		// Download or serve
+		if (download) {
+
+			// Download torrent specified
+			self.client.add(torrentId, function (torrent) {
+
+				// Bind on progress evets
+				torrent.on('download', function(chunkSize) {
+					self.gui.updateProgres( this.progress, torrent.downloadSpeed, torrent.swarm.wires.length );
+				});
+				torrent.on('done', function() {
+
+					// Hide GUI
+					self.gui.hideLoading();
+
+				});	
+
+				// Deploy
+				self._processTorrent( torrent );
+
+			});
+
+		} else {
+
+		}
 
 	});
 
