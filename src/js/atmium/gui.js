@@ -59,7 +59,6 @@ var AtmiumGUI = function( hostDOM ) {
  */
 AtmiumGUI.prototype.updateProgres = function( progress, speed, peers ) {
 	if (this.lockdown) return;
-	console.log(progress, speed, peers);
 
 	// Update display
 	if (speed !== undefined) {

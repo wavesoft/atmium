@@ -1,7 +1,10 @@
 
 var mime = require("mime")
 var magnetURI = require('magnet-uri')
+var localForage = require('localforage')
 var Buffer = require('buffer').Buffer;
+
+var ProgressBase = require("./progress");
 
 /**
  * Find the fine in the specified list
@@ -16,96 +19,162 @@ function fileFromList( filename, list ) {
 }
 
 /**
- * Fileset object
+ * Bundle object
  */
-var Fileset = function() {
+var Bundle = function( client, infoHash ) {
+	ProgressBase.apply(this);
 
 	// Load callbacks
 	this._torrent = null;
-	this._cache = null;
 	this._loaded = false;
+	this._cache = null;
 	this._loadCallbacks = [];
 	this._fileCallbacks = {};
 	this._meta = {};
 
+	// Keep references
+	this._client = client;
+	this.infoHash = infoHash;
+
 };
 
+Bundle.prototype = Object.create( ProgressBase.prototype );
+
 /**
- * Create a fileset object from cache
+ * Abort possible loading of the bundle
  */
-Fileset.fromCache = function( cache, torrentMeta ) {
+Bundle.prototype.abort = function() {
 
-	// Create a fileset
-	var fileset = new Fileset();
-
-	// Update properties
-	fileset._cache = cache;
-	fileset._meta = torrentMeta;
-
-	// Return fileset
-	return fileset;
+	// Destroy torrent
+	if (this._torrent) {
+		this._torrent.destroy();
+	}
 
 }
 
 /**
- * Create a fileset object from torrent
+ * Initialize bundle
  */
-Fileset.fromTorrent = function( torrent, cache ) {
+Bundle.prototype.initialize = function( callback ) {
+	var self = this;
 
-	// Get files in torrent
-	var torrentFiles = torrent.files;
-	var fileset = new Fileset();
+	// Create a cache instance
+	this._cache = localForage.createInstance({
+		name: "atmium." + self.infoHash
+	});
 
-	// Update properties
-	fileset._torrent = torrent;
-	fileset._cache = cache;
-	fileset._meta = {
-		'm': torrent.magnetURI,
-		'n': torrent.name,
-		'p': '',
-	};
+	// Check if we have cached metadata for this bundle
+	this._cache.getItem('META', function(err, data) {
 
-	// Check if all torrent files have a common prefix
-	var firstPath = torrentFiles[0].path;
-	if (firstPath.indexOf("/") > 0) {
-
-		// Make sure this prefix exists in every file
-		var prefix = firstPath.split("/")[0]+"/", hasPrefix = true;
-		for (var i=0; i<torrentFiles.length; i++) {
-			if (torrentFiles[i].path.substr(0,prefix.length) != prefix) {
-				hasPrefix = false;
-				break;
-			}
+		// Check for errors
+		if (err) {
+			if (callback) callback( "Unable to get cached information!", null );
+			return;
 		}
 
-		// Update torrent config prefix length
-		if (hasPrefix)
-			fileset._meta.p = prefix;
+		// Check cache state
+		if (data) {
 
-	}
+			// Initialize with cache
+			self._meta = data;
 
-	// Cache all files when done
-	torrent.on('done', (function() {
+			// Trigger callback
+			if (callback) callback( null, self );
 
-		// Call callbacks
-		this._loaded = true;
-		for (var i=0; i<this._loadCallbacks; i++)
-			this._loadCallbacks[i]();
+			// Compile the torrent to seed
+			self.compileTorrent(function( err, result ) {
 
-		// Save fileset metadata
-		cache.setItem( 'META', this._meta );
+				// Check for errors
+				if (err) {
+					console.error("Unable to compile torrent from cache!", err);
+					return;
+				}
 
-	}).bind(fileset));
+				// Start seeding torrent
+				self._client.seed( result.files, result.opts, function(torrent) {
+					console.info("Seeding torrent " + torrent.infoHash);
+				});
 
-	// Return fileset
-	return fileset;
+			});
+
+		} else {
+
+			// Initialize with torrent
+			self._client.add( self.infoHash, function (torrent) {
+
+				// Update properties
+				self._torrent = torrent;
+				self._meta = {
+					'm': torrent.magnetURI,
+					'n': torrent.name,
+					'p': '',
+				};
+
+				// Check if all torrent files have a common prefix
+				var torrentFiles = torrent.files,
+					firstPath = torrentFiles[0].path;
+				if (firstPath.indexOf("/") > 0) {
+
+					// Make sure this prefix exists in every file
+					var prefix = firstPath.split("/")[0]+"/", hasPrefix = true;
+					for (var i=0; i<torrentFiles.length; i++) {
+						if (torrentFiles[i].path.substr(0,prefix.length) != prefix) {
+							hasPrefix = false;
+							break;
+						}
+					}
+
+					// Update torrent config prefix length
+					if (hasPrefix)
+						self._meta.p = prefix;
+				}
+
+				// Start progress
+				self.startProgress();
+
+				// Cache all files when done
+				torrent.on('download', (function(chunkSize) {
+					// console.log('chunk size: ' + chunkSize);
+					// console.log('total downloaded: ' + torrent.downloaded);
+					// console.log('download speed: ' + torrent.downloadSpeed);
+					// console.log('progress: ' + torrent.progress);
+
+					self.updateProgress( torrent.progress, {
+						'speed': torrent.downloadSpeed,
+						'peers': torrent.swarm.wires.length,
+						'timeleft': torrent.timeRemaining,
+					});
+
+				}).bind(this));
+				torrent.on('done', (function() {
+
+					// Call callbacks
+					this._loaded = true;
+					for (var i=0; i<this._loadCallbacks; i++)
+						this._loadCallbacks[i]();
+
+					// Save self metadata
+					self._cache.setItem( 'META', this._meta );
+					self.completeProgress();
+
+				}).bind(self));
+
+				// Trigger callback
+				if (callback) callback( null, self );
+
+			});
+
+		}
+
+	});
+
 
 }
 
 /**
  * Return the contents of the specified file as buffer
  */
-Fileset.prototype.getFileBuffer = function( filename, callback ) {
+Bundle.prototype.getFileBuffer = function( filename, callback ) {
 
 	// Multiple calls on the same file are queued if the request is not complete
 	if (this._fileCallbacks[filename] !== undefined) {
@@ -176,7 +245,7 @@ Fileset.prototype.getFileBuffer = function( filename, callback ) {
 /**
  * Return a file contents as string
  */
-Fileset.prototype.getFileContents = function( filename, callback ) {
+Bundle.prototype.getFileContents = function( filename, callback ) {
 	this.getFileBuffer(filename, function(err, buf) {
 		if (err) {
 			// Forward error on errors
@@ -191,7 +260,7 @@ Fileset.prototype.getFileContents = function( filename, callback ) {
 /**
  * Return a blob url for he specified filename
  */
-Fileset.prototype.getFileURL = function( filename, callback ) {
+Bundle.prototype.getFileURL = function( filename, callback ) {
 	var mimeType = mime.lookup( filename );
 	this.getFileBuffer(filename, function(err, buf) {
 		if (err) {
@@ -209,7 +278,7 @@ Fileset.prototype.getFileURL = function( filename, callback ) {
 /**
  * Compile resources required to seed a torrent
  */
-Fileset.prototype.compileTorrent = function( callback ) {
+Bundle.prototype.compileTorrent = function( callback ) {
 
 	// Validate
 	if (!this._cache) {
@@ -249,5 +318,5 @@ Fileset.prototype.compileTorrent = function( callback ) {
 
 }
 
-// Export fileset
-module.exports = Fileset;
+// Export bundle
+module.exports = Bundle;

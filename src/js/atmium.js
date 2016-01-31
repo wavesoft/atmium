@@ -1,9 +1,8 @@
 var WebTorrent = require('webtorrent')
 var magnetURI = require('magnet-uri')
-var localForage = require('localforage')
 
 var AtmiumGUI = require('./atmium/gui')
-var AtmiumFileset = require('./atmium/fileset');
+var AtmiumResourceSet = require("./atmium/resourceset")
 
 // Collect atmium instances, used for populating
 // the first instance by the URL specified.
@@ -31,11 +30,28 @@ var Atmium = function( hostDOM ) {
 		this.lockdown = true;
 	} else {
 		try {
+			
 			// Create a WebTorrent client
 			this.client = new WebTorrent();
+
+			// Create resourceset
+			this.resources = new AtmiumResourceSet(this.client);
+
+			// Bind to progress callback
+			this.resources.onstart = function() {
+				self.gui.showLoading();
+			}
+			this.resources.onprogress = function(progress, meta) {
+				self.gui.updateProgres( progress, meta['speed'], meta['peers'] );
+			}
+			this.resources.onstop = function() {
+				self.gui.hideLoading();
+			}
+
 		} catch (e) {
 			this.gui.criticalError("Unable to initialize the WebTorrent component!");
 			this.lockdown = true;
+			throw e;
 		}
 	}
 
@@ -50,98 +66,44 @@ Atmium.prototype.load = function( torrentId ) {
 	if (this.lockdown) return;
 
 	// Get a unique ID of this torrent
-	self.infoHash = null;
+	var infoHash = null;
 	if (torrentId.substr(0,7).toLowerCase() == "magnet:") {
 		var uri = magnetURI.decode(torrentId);
-		self.infoHash = uri.infoHash;
+		infoHash = uri.infoHash;
 	} else {
-		self.infoHash = torrentId;
+		infoHash = torrentId;
 	}
 
-	// Create a cache instance
-	self.cache = localForage.createInstance({
-		name: "atmium." + self.infoHash
-	});
-
-	// Check if we have cached metadata for this fileset
-	self.cache.getItem('META', function(err, data) {
-
-		// Check for errors
+	// Open and get bundle
+	this.resources.getBundle( infoHash, (function(err, bundle) {
 		if (err) {
-			console.error("Unable to check cache status!",err);
-			return;
+			// Handle errors
+		} else {		
+			this._deploy( bundle );
 		}
-
-		// Check cache state
-		if (data) {
-
-			// Initialize with cache
-			self.fileset = AtmiumFileset.fromCache( self.cache, data );
-
-			// Initialize interface in priority
-			self._deploy( self.fileset );
-
-			// Compile the torrent to seed
-			self.fileset.compileTorrent(function( err, result ) {
-
-				// Check for errors
-				if (err) {
-					console.error("Unable to compile torrent from cache!", err);
-					return;
-				}
-
-				// Start seeding torrent
-				self.client.seed( result.files, result.opts, function(torrent) {
-					console.info("Seeding torrent " + torrent.infoHash);
-				});
-
-			});
-
-		} else {
-
-			// Initialize with torrent
-			self.gui.showLoading();
-			self.client.add(torrentId, function (torrent) {
-
-				// Bind on progress evets
-				torrent.on('download', function(chunkSize) {
-					self.gui.updateProgres( torrent.progress, torrent.downloadSpeed, torrent.swarm.wires.length );
-				});
-				torrent.on('done', function() {
-					self.gui.hideLoading();
-				});	
-
-				// Build fileset and deploy ASAP
-				self.fileset = AtmiumFileset.fromTorrent( torrent, self.cache );
-				self._deploy( self.fileset, torrent );
-
-			});
-
-		}
-
-	});
+	}).bind(this));
 
 }
 
 /**
  * Deploy webapp
  */
-Atmium.prototype._deploy = function( fileset, torrent ) {
+Atmium.prototype._deploy = function( bundle ) {
 	var self = this;
-	window.fileset = fileset;
+	window.bundle = bundle;
 
 	// Get manifest
-	fileset.getFileContents( "Atmium.json", function(err, buffer) {
+	bundle.getFileContents( "Atmium.json", function(err, buffer) {
 
 		// Handle errors
 		if (err) {
 			self.gui.criticalError("Unable to process atmium manifest! "+err);
-			if (torrent) torrent.destroy();
+			bundle.abort();
 			return;
 		}
 		if (!buffer) {
 			self.gui.criticalError("Missing atmium manifest file. Unable to continue!");
-			if (torrent) torrent.destroy();
+			bundle.abort();
 			return;
 		}
 
@@ -152,7 +114,7 @@ Atmium.prototype._deploy = function( fileset, torrent ) {
 		// Apply app config
 		if (appConfig['title']) window.title = appConfig['title'];
 		if (appConfig['placeholder']) {
-			fileset.getFileURL( appConfig['placeholder'], function(err, url) {
+			bundle.getFileURL( appConfig['placeholder'], function(err, url) {
 				if (err) {
 					console.log("Could not load placeholder!",err);
 				} else {
@@ -163,11 +125,10 @@ Atmium.prototype._deploy = function( fileset, torrent ) {
 
 	});
 
-
 }
 
 /**
- * Check for atmium runtime request
+ * Check for direct atmium runtime request
  */
 var hash = String(window.location.hash);
 if (hash.length > 1) {
