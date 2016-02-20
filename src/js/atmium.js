@@ -4,7 +4,7 @@ var magnetURI = require('magnet-uri')
 var AtmiumGUI = require('./atmium/gui')
 var AtmiumResourceSet = require("./atmium/resourceset")
 
-var AtmiumStaticRenderer = require("./atmium/renderer/static");
+var AtmiumStaticRenderer = require("./atmium/renderer/StaticRenderer");
 
 // Collect atmium instances, used for populating
 // the first instance by the URL specified.

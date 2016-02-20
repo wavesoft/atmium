@@ -14,7 +14,7 @@ var StaticRenderer = function( hostDOM, resources, bundle, appConfig ) {
 	var self = this;
 
 	// Listen for hash changes
-	window.addEventListener('hashchange', functino(e) {
+	window.addEventListener('hashchange', function(e) {
 		self.route( window.location.hash );
 	});
 
