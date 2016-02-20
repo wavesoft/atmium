@@ -133,25 +133,14 @@ Bundle.prototype.initialize = function( callback ) {
 			// Trigger callback
 			if (callback) callback( null, self );
 
-			// Call callbacks
-			this._loaded = true;
-			for (var i=0; i<this._loadCallbacks; i++)
-				this._loadCallbacks[i]();
+			// Call loaded callbacks
+			self._loaded = true;
+			for (var i=0; i<self._loadCallbacks; i++)
+				self._loadCallbacks[i]();
 
-			// Compile the torrent to seed
-			self.compileTorrent(function( err, result ) {
-
-				// Check for errors
-				if (err) {
-					console.error("Unable to compile torrent from cache!", err);
-					return;
-				}
-
-				// Start seeding torrent
-				self._client.seed( result.files, result.opts, function(torrent) {
-					console.info("Seeding torrent " + torrent.infoHash);
-				});
-
+			// Compile and seed
+			self.compileAndSeed(function(err, torrent) {
+				if (err) console.error("Error seeding: "+err);
 			});
 
 		} else {
@@ -165,9 +154,9 @@ Bundle.prototype.initialize = function( callback ) {
 				// Update properties
 				self._torrent = torrent;
 				self._meta = {
-					'm': torrent.magnetURI,
-					'n': torrent.name,
-					'p': '',
+					'magnet': torrent.magnetURI,
+					'name': torrent.name,
+					'prefix': '',
 				};
 
 				// Check if all torrent files have a common prefix
@@ -186,11 +175,11 @@ Bundle.prototype.initialize = function( callback ) {
 
 					// Update torrent config prefix length
 					if (hasPrefix)
-						self._meta.p = prefix;
+						self._meta.prefix = prefix;
 				}
 
 				// Cache all files when done
-				torrent.on('download', (function(chunkSize) {
+				torrent.on('download', function(chunkSize) {
 					// console.log('chunk size: ' + chunkSize);
 					// console.log('total downloaded: ' + torrent.downloaded);
 					// console.log('download speed: ' + torrent.downloadSpeed);
@@ -202,19 +191,33 @@ Bundle.prototype.initialize = function( callback ) {
 						'timeleft': torrent.timeRemaining,
 					});
 
-				}).bind(this));
-				torrent.on('done', (function() {
+				});
+				torrent.on('done', function() {
 
 					// Call callbacks
-					this._loaded = true;
-					for (var i=0; i<this._loadCallbacks; i++)
-						this._loadCallbacks[i]();
+					self._loaded = true;
+					for (var i=0; i<self._loadCallbacks; i++)
+						self._loadCallbacks[i]();
 
 					// Save self metadata
-					self._cache.setItem( 'META', this._meta );
 					self.completeProgress();
 
-				}).bind(self));
+					// Cache all remaining items in local storage
+					self.cacheRemainingFiles( torrent, function(err, result) {
+
+						// Unable to cache remaining files
+						if (err) {
+							console.log("Unable to cache torrent files: "+err);
+							return;
+						}
+
+						// Finally, add torrent metadata
+						self._cache.setItem( 'META', self._meta );
+						console.info("Seeding torrent " + torrent.infoHash);
+
+					});
+
+				});
 
 				// Trigger callback
 				if (callback) callback( null, self );
@@ -255,7 +258,7 @@ Bundle.prototype.getFileBuffer = function( filename, callback ) {
 	}).bind(this);
 
 	// Check various sources for the file
-	var fname = this._meta.p + filename;
+	var fname = this._meta.prefix + filename;
 	if (this._torrent) {
 
 		// Get file from torrent
@@ -279,7 +282,11 @@ Bundle.prototype.getFileBuffer = function( filename, callback ) {
 
 				// Mark file as cached & update
 				this._cache.setItem(fname, buffer, (function(err, result) {
-					completeCallback( null, buffer );
+					if (err) {
+						completeCallback( 'Cache error:' + err, null );
+					} else {
+						completeCallback( null, buffer );
+					}
 				}).bind(this));
 
 			} else {
@@ -333,6 +340,70 @@ Bundle.prototype.getFileURL = function( filename, callback ) {
 }
 
 /**
+ * Cache all torrent files that are not part of cache
+ */
+Bundle.prototype.cacheRemainingFiles = function( torrent, callback ) {
+	var self = this;
+
+	// Validate
+	if (!this._cache) {
+		callback("No cache store to store torrent information to", null);
+		return;
+	}
+
+	// Iterate over cache files and build files array
+	this._cache.keys(function(err, keys) {
+		var error = null,
+			cachedFiles = [];
+
+		// Forward errors
+		if (err) {
+			callback(err, null);
+			return;
+		}
+
+		// Check files that are in torrent but not in cache
+		for (var i=0; i<torrent.files.length; i++) {
+			var file = torrent.files[i];
+
+			// Populate missing items
+			if (keys.indexOf(file.path) == -1) {
+
+				// Get file buffer (should already be cached)
+				(function(file) {
+					file.getBuffer(function(err, buffer) {
+
+						// Log errors
+						if (err) {
+							console.error( error = "Cannot get buffer of '"+file.path+": "+err );
+							return;
+						}
+
+						// Update cache item
+						self._cache.setItem(file.path, buffer, function(err, result) {
+							if (err) {
+								console.error( error = "Cannot update cache of '"+file.path+": "+err );
+							}
+						});
+
+					});
+				})(file);
+
+				// Keep new files on response array
+				cachedFiles.push(file);
+
+			}
+
+		}
+
+		// Trigger callback
+		callback( error, cachedFiles );
+
+	});
+
+}
+
+/**
  * Compile resources required to seed a torrent
  */
 Bundle.prototype.compileTorrent = function( callback ) {
@@ -344,9 +415,9 @@ Bundle.prototype.compileTorrent = function( callback ) {
 	}
 
 	// Collect metadata
-	var magnet = magnetURI.decode( this._meta.m ),
+	var magnet = magnetURI.decode( this._meta.magnet ),
 		opt = {
-			'name': this._meta.m,
+			'name': this._meta.magnet,
 			'announceList': magnet.announce
 		};
 
@@ -368,9 +439,43 @@ Bundle.prototype.compileTorrent = function( callback ) {
 			callback(err, null);
 		} else {
 			// Iteration completed
-			callback(null, { 'files': files, 'opt': opt })
+			callback(null, { 'files': files, 'opt': opt, 'infoHash': magnet.infoHash  })
 
 		}
+	});
+
+}
+
+
+/**
+ * Compile resource buffers and start seeding the torrent
+ */
+Bundle.prototype.compileAndSeed = function( callback ) {
+	var self = this;
+
+	// Compile the torrent to seed
+	self.compileTorrent(function( err, result ) {
+
+		// Check for errors
+		if (err) {
+			callback( "Unable to compile torrent from cache!", null );
+			return;
+		}
+
+		// Start seeding torrent
+		self._client.seed( result.files, result.opts, function(torrent) {
+
+			// We should serve the same hashID as the one in the database, 
+			// otherwise something went really wrong
+			if ( torrent.infoHash != self.infoHash ) {
+				callback( "Mismatched infoHash, cache corrupted!", null );
+			} else {
+				console.info("Seeding torrent " + torrent.infoHash);
+				callback( null, torrent );
+			}
+
+		});
+
 	});
 
 }
