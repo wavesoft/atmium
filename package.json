@@ -22,6 +22,9 @@
   },
   "homepage": "https://github.com/wavesoft/atmium#readme",
   "dependencies": {
+    "bencode": "^0.7.0",
+    "events": "^1.1.0",
+    "inherits": "^2.0.1",
     "localforage": "^1.3.3",
     "magnet-uri": "^5.1.2",
     "mime": "^1.3.4",
