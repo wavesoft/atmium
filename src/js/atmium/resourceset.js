@@ -7,8 +7,14 @@ var AtmiumBundle = require("./bundle");
  * collecting and managing multiple resources.
  */
 var ResourceSet = function( client ) {
+
+	// Exclude us from progress
 	ProgressBase.apply(this);
+	this.progress = null;
+
+	// Keep torrent client
 	this.client = client;
+
 };
 
 // Subclass from progress base

@@ -4,6 +4,8 @@ var magnetURI = require('magnet-uri')
 var AtmiumGUI = require('./atmium/gui')
 var AtmiumResourceSet = require("./atmium/resourceset")
 
+var AtmiumStaticRenderer = require("./atmium/renderer/static");
+
 // Collect atmium instances, used for populating
 // the first instance by the URL specified.
 var _atmiumInstances = [];
@@ -18,6 +20,7 @@ var Atmium = function( hostDOM ) {
 	_atmiumInstances.push( this );
 
 	// Setup properties
+	this.hostDOM = hostDOM;
 	this.lockdown = false;
 	this.files = [];
 
@@ -122,6 +125,24 @@ Atmium.prototype._deploy = function( bundle ) {
 				}
 			});
 		}
+
+		// Pick the appropriate renerer for this application
+		var renderer = appConfig['renderer'] || 'default',
+			renderOptions = {
+				'default': AtmiumStaticRenderer,
+				'static': AtmiumStaticRenderer
+			};
+		if (!renderOptions[renderer]) {
+			self.gui.criticalError("Invalid renderer specified in the application!");
+			bundle.abort();
+			return;
+		}
+
+		// Create new application renderer
+		var appRenderer = new renderOptions[renderer]( self.gui.getBodyDOM(), this.resources, bundle, appConfig );
+		appRenderer.initialize(function() {
+			self.gui.hideLoading();
+		});
 
 	});
 

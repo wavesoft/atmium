@@ -11,6 +11,10 @@ var AtmiumGUI = function( hostDOM ) {
 	// Properties
 	this.lockdown = false;
 
+	// Create Body dom
+	this.bodyDOM = document.createElement('div');
+	hostDOM.appendChild(this.bodyDOM);
+
 	// Create progress DOM
 	var domLoadingFrame = document.createElement('div'),
 		domLoadingMessage = document.createElement('div'),
@@ -148,6 +152,13 @@ AtmiumGUI.prototype.criticalError = function( message ) {
  */
 AtmiumGUI.prototype.setPlaceholder = function( url ) {
 	this._progElm.frame.style['background-image'] = "url(" + url + ")";
+}
+
+/**
+ * Return the body DOM
+ */
+AtmiumGUI.prototype.getBodyDOM = function() {
+	return this.bodyDOM;
 }
 
 /**

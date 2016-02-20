@@ -2,15 +2,21 @@
 /**
  * Base class for Atmium Renderers
  */
-var Renderer = function( routeset ) {
-	
+var Renderer = function( hostDOM, resources, bundle, appConfig ) {
+
+	// Keep references
+	this.config = appConfig;
+	this.resources = resources;
+	this.bundle = bundle;
+	this.hostDOM = hostDOM;
+
 };
 
 /**
- * Render
+ * Prepare for rendering and trigger callback when ready to render
  */
-Renderer.prototype.render = function( url ) {
+Renderer.prototype.initialize = function( callback ) {
 	
 }
 
-modules.export = Renderer;
+module.exports = Renderer;

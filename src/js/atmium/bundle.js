@@ -1,10 +1,45 @@
 
-var mime = require("mime")
+// var mime = require("mime")
 var magnetURI = require('magnet-uri')
 var localForage = require('localforage')
 var Buffer = require('buffer').Buffer;
-
 var ProgressBase = require("./progress");
+
+/**
+ * A small mime table
+ */
+var smime = { 
+	'js'	: 'application/javascript',
+	'css'	: 'text/css',
+	'json'	: 'application/json',
+	'gz'	: 'application/octet-stream',
+	'bz2'	: 'application/x-bzip2',
+	'mov'	: 'video/quicktime',
+	'mpg'	: 'video/mpeg',
+	'mp4'	: 'video/mp4',
+	'ogg'	: 'audio/ogg',
+	'ogv'	: 'video/ogg',
+	'mebm'	: 'application/octet-stream',
+	'gif'	: 'image/gif',
+	'png'	: 'image/png',
+	'bmp'	: 'image/bmp',
+	'jpg'	: 'image/jpeg',
+	'jpeg'	: 'image/jpeg',
+};
+
+function smimeOf(filename) {
+	var filebase = filename.split("?")[0];
+		filebase = filebase.split("#")[0];
+	var extparts = filebase.split(".");
+	return smime[extparts[extparts.length-1]];
+}
+
+// var mime = require("mime")
+// var mimes = ['js','css','json','gz','bz2','mov','mpg','mp4','ogg','ogv','mebm','gif','png','bmp','jpg','jpeg'];
+// var smime = {};
+// for (var i=0; i<mimes.length; i++) {
+// 	smime[mimes[i]] = mime.lookup('.'+mimes[i]);
+// }
 
 /**
  * Find the fine in the specified list
@@ -53,6 +88,23 @@ Bundle.prototype.abort = function() {
 }
 
 /**
+ * Trigger the specified callback when ready
+ */
+Bundle.prototype.onReady = function( callback ) {
+	if (!callback) return;
+
+	// If already loaded, call directly
+	if (this._loaded) {
+		callback();
+		return;
+	}
+
+	// Otherwise call when ready
+	this._loadCallbacks.push(callback);
+
+}
+
+/**
  * Initialize bundle
  */
 Bundle.prototype.initialize = function( callback ) {
@@ -81,6 +133,11 @@ Bundle.prototype.initialize = function( callback ) {
 			// Trigger callback
 			if (callback) callback( null, self );
 
+			// Call callbacks
+			this._loaded = true;
+			for (var i=0; i<this._loadCallbacks; i++)
+				this._loadCallbacks[i]();
+
 			// Compile the torrent to seed
 			self.compileTorrent(function( err, result ) {
 
@@ -98,6 +155,9 @@ Bundle.prototype.initialize = function( callback ) {
 			});
 
 		} else {
+			
+			// Start progress
+			self.startProgress();
 
 			// Initialize with torrent
 			self._client.add( self.infoHash, function (torrent) {
@@ -128,9 +188,6 @@ Bundle.prototype.initialize = function( callback ) {
 					if (hasPrefix)
 						self._meta.p = prefix;
 				}
-
-				// Start progress
-				self.startProgress();
 
 				// Cache all files when done
 				torrent.on('download', (function(chunkSize) {
@@ -261,7 +318,7 @@ Bundle.prototype.getFileContents = function( filename, callback ) {
  * Return a blob url for he specified filename
  */
 Bundle.prototype.getFileURL = function( filename, callback ) {
-	var mimeType = mime.lookup( filename );
+	var mimeType = smimeOf( filename );
 	this.getFileBuffer(filename, function(err, buf) {
 		if (err) {
 			// Forward error on errors

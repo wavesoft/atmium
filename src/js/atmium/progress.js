@@ -19,7 +19,8 @@ var ProgressBase = function() {
  */
 ProgressBase.prototype.startProgress = function() {
 	this.progress = 0.0;
-	this._sendUpdate(true);
+	this._callStart();
+	this._sendUpdate();
 }
 
 /**
@@ -27,7 +28,7 @@ ProgressBase.prototype.startProgress = function() {
  */
 ProgressBase.prototype.updateProgress = function( progress, meta ) {
 	this.progress = progress;
-	this._sendUpdate( false, meta );
+	this._sendUpdate( meta );
 }
 
 /**
@@ -96,22 +97,17 @@ ProgressBase.prototype._callStop = function() {
 /**
  * Send progress update
  */
-ProgressBase.prototype._sendUpdate = function( forceStart, meta ) {
+ProgressBase.prototype._sendUpdate = function( meta ) {
 	// Activate if not active
 	var progress = this._getProgress();
-
-	// Activate
-	if ((progress > 0) || forceStart) 
-		this._callStart();
 
 	// Update
 	if (!meta) meta={};
 	if (this.onprogress) this.onprogress(progress, meta);
-	if (this.parent) this.parent._sendUpdate( forceStart, meta );
+	if (this.parent) this.parent._sendUpdate( meta );
 
 	// Deactivate
-	if (progress == 0 && !forceStart)
-		this._callStop();
+	if (progress == 1.0) this._callStop();
 
 }
 
