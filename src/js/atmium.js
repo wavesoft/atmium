@@ -105,7 +105,7 @@ Atmium.prototype._deploy = function( bundle ) {
 			return;
 		}
 		if (!buffer) {
-			self.gui.criticalError("Missing atmium manifest file. Unable to continue!");
+			self.gui.criticalError("Missing atmium manifest file!");
 			bundle.abort();
 			return;
 		}

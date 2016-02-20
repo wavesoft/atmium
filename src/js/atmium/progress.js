@@ -11,7 +11,6 @@ var ProgressBase = function() {
 	this.onstart = null;
 	this.onprogress = null;
 	this.onstop = null;
-
 };
 
 /**
